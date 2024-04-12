@@ -75,6 +75,22 @@ mu15-wave : $(MU15)
 !ENDIF
 	build\mu15.exe -w
 
+MU50 = mu50 mu50/yamaha_mu50.bin
+
+mu50 : build build/mu50.exe
+
+mu50-firmware : $(MU50)
+	build\mu50.exe -f
+
+mu50-midi : $(MU50)
+	build\mu50.exe -m
+
+mu50-table : $(MU50)
+	build\mu50.exe -t > table\mu50.txt
+
+mu50-bitmap : $(MU50)
+	build\mu50.exe -b
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
