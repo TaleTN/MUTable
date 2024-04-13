@@ -91,6 +91,14 @@ mu50-table : $(MU50)
 mu50-bitmap : $(MU50)
 	build\mu50.exe -b
 
+mu50-wave : $(MU50) mu50/xq057c0.ic18 mu50/xq058c0.ic19
+!IF !EXIST("wave/mu50/")
+	@mkdir wave\mu50
+!ELSE
+	@del wave\mu50\*.wav
+!ENDIF
+	build\mu50.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
