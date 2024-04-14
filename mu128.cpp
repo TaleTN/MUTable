@@ -10,6 +10,8 @@
 
 #include "WDL/heapbuf.h"
 #include "WDL/wdlendian.h"
+#include "WDL/wdltypes.h"
+#include "WDL/wavwrite.h"
 
 int read_firmware(const char* const filenames[2], WDL_HeapBuf* const buf, const int num, const int size)
 {
@@ -1205,6 +1207,265 @@ int print_bitmaps(FILE* const fp, const WDL_HeapBuf* const firmware, int ofs, co
 	return num;
 }
 
+int read_wavetbl(const char* const filenames[4], WDL_HeapBuf* const buf)
+{
+	unsigned char* ptr = (unsigned char*)buf->ResizeOK((24 + 8)*1024*1024);
+	if (!ptr) return 0;
+
+	unsigned char* const tmp = ptr + 24*1024*1024;
+	int total = 0;
+
+	for (int i = 0; i < 4; ++i)
+	{
+		FILE* const fp = fopen(filenames[i], "rb");
+		if (!fp) return 0;
+
+		const int n = (int)fread(tmp, 1, i < 2 ? 8*1024*1024 : 4*1024*1024, fp) & ~1;
+		fclose(fp);
+
+		for (int j = 0; j < n; j += 2)
+		{
+			memcpy(ptr, &tmp[j], 2);
+			ptr += 4;
+		}
+
+		total += n;
+		ptr -= !(i & 1) ? (n - 1) * 2 : 2;
+	}
+
+	buf->Resize(24*1024*1024);
+
+	return total == buf->GetSize() ? total : 0;
+}
+
+// https://bleepsandpops.com/post/37792760450/adding-cue-points-to-wav-files-in-c
+
+void write_cue_points(WaveWriter* const wav, const int num, const int loop, const int end)
+{
+	assert(num == 1 || num == 2);
+
+	static const int max_num = 2;
+	int cue[3 + max_num * 6];
+
+	cue[0] = WDL_bswap32_if_le('cue ');
+	cue[1] = WDL_bswap32_if_be((1 + num * 6) * sizeof(int));
+	cue[2] = WDL_bswap32_if_be(num);
+
+	int* ptr = &cue[3];
+	int ofs = num == 2 ? loop : end;
+
+	for (int i = 0; i < num; ++i)
+	{
+		ptr[0] = WDL_bswap32_if_be(i);
+		ptr[1] = 0;
+		ptr[2] = WDL_bswap32_if_le('data');
+		ptr[3] = 0;
+		ptr[4] = 0;
+		ptr[5] = WDL_bswap32_if_be(ofs);
+
+		ofs = end;
+		ptr += 6;
+	}
+
+	wav->WriteChunk(cue, (3 + num * 6) * sizeof(int));
+}
+
+int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, const int format, const int addr, const int attack, const int loop, const int dpcm = 0)
+{
+	const unsigned char* const buf = (const unsigned char*)wavetbl->Get() + addr;
+
+	static const int extra = 3;
+	const int len = attack + loop + extra;
+
+	WaveWriter wav;
+	if (!wav.Open(filename, format == 2 ? 8 : 16, 1, 44100, 0)) return 0;
+
+	switch (format)
+	{
+		// 16-bit signed linear PCM
+		case 0:
+		{
+			const unsigned char* ptr = buf - (attack << 1);
+
+			for (int i = 0; i < len; ++i)
+			{
+				short sample = ptr[0] | (ptr[1] << 8);
+
+				sample = WDL_bswap16_if_be(sample);
+				wav.WriteRaw(&sample, 2);
+
+				ptr += 2;
+			}
+			break;
+		}
+
+		// 12-bit signed linear PCM
+		case 1:
+		{
+			const unsigned char* ptr = buf - (attack >> 1) * 3;
+
+			for (int i = 0; i < len; ++i)
+			{
+				short sample;
+
+				if (!(i & 1))
+				{
+					sample = (ptr[0] << 4) | (ptr[1] << 12);
+				}
+				else
+				{
+					sample = (ptr[1] & 0xF0) | (ptr[2] << 8);
+					ptr += 3;
+				}
+
+				sample = WDL_bswap16_if_be(sample);
+				wav.WriteRaw(&sample, 2);
+			}
+			break;
+		}
+
+		// 8-bit signed linear PCM
+		case 2:
+		{
+			const unsigned char* const ptr = buf - attack;
+
+			for (int i = 0; i < len; ++i)
+			{
+				unsigned char sample = ptr[i] ^ 0x80;
+				wav.WriteRaw(&sample, 1);
+			}
+			break;
+		}
+
+		// 8-bit signed log DPCM
+		case 3:
+		{
+			static const unsigned short log_tbl[128] =
+			{
+				0, 8, 16, 24, 32, 40, 48, 56, 64, 72,
+				80, 88, 96, 104, 112, 120, 128, 136, 144, 152,
+				160, 168, 176, 184, 192, 200, 208, 216, 224, 232,
+				240, 248, 256, 272, 288, 304, 320, 336, 352, 368,
+				384, 400, 416, 432, 448, 464, 480, 496, 512, 528,
+				544, 560, 576, 592, 608, 624, 640, 656, 672, 688,
+				704, 720, 736, 752, 768, 800, 832, 864, 896, 928,
+				960, 992, 1024, 1056, 1088, 1120, 1152, 1184, 1216, 1248,
+				1280, 1312, 1344, 1376, 1408, 1440, 1472, 1504, 1536, 1568,
+				1600, 1632, 1664, 1696, 1728, 1760, 1792, 1856, 1920, 1984,
+				2048, 2112, 2176, 2240, 2304, 2368, 2432, 2496, 2560, 2624,
+				2688, 2752, 2816, 2880, 2944, 3008, 3072, 3136, 3200, 3264,
+				3328, 3392, 3456, 3520, 3584, 3648, 3712, 3776
+			};
+
+			static const unsigned char ofs_tbl[4] = { 7, 6, 4, 0 };
+			const int ofs = ofs_tbl[dpcm & 3], scale = (dpcm >> 2) & 7;
+
+			const unsigned char* const ptr = buf - attack;
+			int sum = 0;
+
+			for (int i = 0; i < len; ++i)
+			{
+				const int step = ptr[i];
+
+				const int delta = log_tbl[step & 0x7F];
+				const int min_delta = -delta;
+
+				sum += step & 0x80 ? min_delta : delta;
+				sum -= ofs;
+
+				int y = (sum << scale) >> 3;
+
+				y = wdl_max(y, -32768);
+				y = wdl_min(y, +32767);
+
+				short sample = WDL_bswap16_if_be((short)y);
+				wav.WriteRaw(&sample, 2);
+			}
+			break;
+		}
+
+		default: assert(false);
+	}
+
+	wav.EndDataChunk();
+	write_cue_points(&wav, loop ? 2 : 1, attack, len - extra);
+	wav.Close();
+
+	return len;
+}
+
+int extract_sample(const char* const filename, const int ofs, const WDL_HeapBuf* const wavetbl, const unsigned char* const ptr)
+{
+	const int attack = (ptr[0] << 16) | (ptr[1] << 8) | ptr[2];
+	const int loop = (ptr[4] << 16) | (ptr[5] << 8) | ptr[6];
+
+	if (!(attack || loop)) return 0;
+
+	const int format = ptr[7] >> 6, dpcm = (ptr[7] >> 1) & 0x1F;
+	const int addr = (((ptr[7] & 0x01) << 24) | (ptr[8] << 16) | (ptr[9] << 8) | ptr[10]) << 2;
+
+	#ifndef MUTABLE_EXTRACT_DUPLICATES
+
+	static const int max_samples = 2029;
+	static unsigned char sample_list[max_samples][10];
+
+	static int num_samples = 0;
+	unsigned char hash[10];
+
+	memcpy(&hash[0], &ptr[0], 3);
+	memcpy(&hash[3], &ptr[4], 7);
+	hash[6] = (format << 6) | (format == 3 ? dpcm : 0);
+
+	for (int i = 0; i < num_samples; ++i)
+	{
+		if (!memcmp(sample_list[i], hash, 10)) return 0;
+	}
+
+	assert(num_samples < max_samples);
+	memcpy(sample_list[num_samples++], hash, 10);
+
+	#endif
+
+	char fn[128];
+	sprintf(fn, filename, ofs);
+
+	return write_sample(fn, wavetbl, format, addr, attack, loop, dpcm);
+}
+
+int extract_drum_samples(const char* const filename, const WDL_HeapBuf* const firmware, int ofs, const int num, const WDL_HeapBuf* const wavetbl)
+{
+	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
+	int n = 0;
+
+	for (int i = 0; i < num; ++i)
+	{
+		const int sfx_no = (ptr[24] << 8) | ptr[25];
+
+		if (sfx_no == 0xFFFF)
+		{
+			n += extract_sample(filename, i * 42, wavetbl, &ptr[31]) > 0;
+		}
+
+		ptr += 42;
+	}
+
+	return n;
+}
+
+int extract_samples(const char* const filename, const WDL_HeapBuf* const firmware, const int ofs, const int num, const WDL_HeapBuf* const wavetbl)
+{
+	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
+	int n = 0;
+
+	for (int i = 0; i < num; ++i)
+	{
+		n += extract_sample(filename, i * 16, wavetbl, &ptr[5]) > 0;
+		ptr += 16;
+	}
+
+	return n;
+}
+
 int main(const int argc, const char* const* const argv)
 {
 	int opt = argc == 2 ? argv[1][0] : 0;
@@ -1216,16 +1477,26 @@ int main(const int argc, const char* const* const argv)
 		// IC27 XV217C0 FLASH ROM v1.06
 		"mu128/xv217c0.ic27", // SHA1(381e1d146c4e693a21f6e6e4ea2a8b9f6e3033ef)
 		// IC25 XV224C0 FLASH ROM v1.06
-		"mu128/xv224c0.ic25"  // SHA1(56d69f3214899fa25ef5e9ea6c2bbf0c3d378123)
+		"mu128/xv224c0.ic25", // SHA1(56d69f3214899fa25ef5e9ea6c2bbf0c3d378123)
 		#elif defined(MU128_UPGRADE_V2_00)
 		// Upgrade to v2.00
-		"mu128/V200Q.ydl" // SHA1(9ba008f9343cd1e4a9b255ae393d84517ed3d893)
+		"mu128/V200Q.ydl", // SHA1(9ba008f9343cd1e4a9b255ae393d84517ed3d893)
 		#else // MU128_FIRMWARE_V2_00
 		// IC27 FLASH ROM v2.00
 		"mu128/mu128-v2.00-h.bin", // SHA1(8ed4a6929c66fcb5248e16288dfaf56a3286aaf8)
 		// IC25 FLASH ROM v2.00
-		"mu128/mu128-v2.00-l.bin"  // SHA1(e1ff3387968e89f5bc5df3e15cd0d6039104acd0)
+		"mu128/mu128-v2.00-l.bin", // SHA1(e1ff3387968e89f5bc5df3e15cd0d6039104acd0)
 		#endif
+
+		// IC53 XV364A0 WAVE ROM 1 64M
+		"mu128/xv364a0.ic53", // SHA1(e7098246b33c3cf22ed8cc15ed6383f8a06d17e9)
+		// IC54 XV365A0 WAVE ROM 1 64M
+		"mu128/xv365a0.ic54", // SHA1(d45a2e85859e05046f3ede8317a9bb0b88898116)
+
+		// IC57 XV366A0 WAVE ROM 2 32M
+		"mu128/xv366a0.ic57", // SHA1(e6b8b7cf95e4e9552001450570fcea87282db1e8)
+		// IC58 XV376A0 WAVE ROM 2 32M
+		"mu128/xv376a0.ic58"  // SHA1(c30888603fd5db367d14553763f0a3f392c5427c)
 	};
 
 	WDL_HeapBuf firmware;
@@ -1363,6 +1634,41 @@ int main(const int argc, const char* const* const argv)
 		return EXIT_SUCCESS;
 	}
 
-	printf("Usage: %s -f | -m | -t | -b\n", argv[0]);
+	WDL_HeapBuf wavetbl;
+
+	#ifdef MU128_UPGRADE_V2_00
+	if (!read_wavetbl(&roms[1], &wavetbl))
+	#else // MU128_FIRMWARE_*
+	if (!read_wavetbl(&roms[2], &wavetbl))
+	#endif
+	{
+		return EXIT_FAILURE;
+	}
+
+	if (opt == '-w')
+	{
+		static const int ofs[] =
+		{
+			#ifdef MU128_FIRMWARE_V1_06
+			+1422916, 940,
+			+1044132
+			#else // MU128_FIRMWARE_V2_00
+			+1428276, 957,
+			+1039116
+			#endif
+		};
+
+		const int num = ofs[1];
+
+		int n = extract_drum_samples("wave/mu128/drum_%05d.wav", &firmware, ofs[0], num, &wavetbl);
+		n += extract_samples("wave/mu128/sample_%05d.wav", &firmware, ofs[2], 2715, &wavetbl);
+
+		if (!n) return EXIT_FAILURE;
+
+		printf("%d\n", n);
+		return EXIT_SUCCESS;
+	}
+
+	printf("Usage: %s -f | -m | -t | -b | -w\n", argv[0]);
 	return EXIT_FAILURE;
 }

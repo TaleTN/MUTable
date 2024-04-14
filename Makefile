@@ -187,6 +187,14 @@ mu128-table : $(MU128)
 mu128-bitmap : $(MU128)
 	build\mu128.exe -b
 
+mu128-wave : $(MU128) mu128/xv364a0.ic53 mu128/xv365a0.ic54 mu128/xv366a0.ic57 mu128/xv376a0.ic58
+!IF !EXIST("wave/mu128/")
+	@mkdir wave\mu128
+!ELSE
+	@del wave\mu128\*.wav
+!ENDIF
+	build\mu128.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
