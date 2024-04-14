@@ -99,6 +99,30 @@ mu50-wave : $(MU50) mu50/xq057c0.ic18 mu50/xq058c0.ic19
 !ENDIF
 	build\mu50.exe -w
 
+MU80 = mu80 mu80/xq556a0.ic8
+
+mu80 : build build/mu80.exe
+
+mu80-firmware : $(MU80)
+	build\mu80.exe -f
+
+mu80-midi : $(MU80)
+	build\mu80.exe -m
+
+mu80-table : $(MU80)
+	build\mu80.exe -t > table\mu80.txt
+
+mu80-bitmap : $(MU80)
+	build\mu80.exe -b
+
+mu80-wave : $(MU80) mu80/xq012b0-822.bin mu80/xq013b0-823.bin mu80/xq089b0-824.bin mu80/xq090b0-825.bin
+!IF !EXIST("wave/mu80/")
+	@mkdir wave\mu80
+!ELSE
+	@del wave\mu80\*.wav
+!ENDIF
+	build\mu80.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
