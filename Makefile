@@ -171,7 +171,7 @@ mu100-wave : $(MU100) mu100/xs518b0.ic34 mu100/xs743b0.ic35 mu100/xt445a0-828.ic
 !ENDIF
 	build\mu100.exe -w
 
-MU128 = mu128 mu128/V200Q.ydl
+MU128 = mu128 mu128/mu128-v2.00-h.bin mu128/mu128-v2.00-l.bin
 
 mu128 : build build/mu128.exe
 

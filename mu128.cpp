@@ -11,6 +11,42 @@
 #include "WDL/heapbuf.h"
 #include "WDL/wdlendian.h"
 
+int read_firmware(const char* const filenames[2], WDL_HeapBuf* const buf, const int num, const int size)
+{
+	unsigned char* ptr = (unsigned char*)buf->ResizeOK((num + 1) * size);
+	if (!ptr) return 0;
+
+	unsigned char* const tmp = ptr + num * size;
+	int total = 0;
+
+	for (int i = 0; i < num; ++i)
+	{
+		FILE* const fp = fopen(filenames[i], "rb");
+		if (!fp) return 0;
+
+		const int n = (int)fread(tmp, 1, size, fp) & ~1;
+		fclose(fp);
+
+		for (int j = 0; j < n; j += 2)
+		{
+			unsigned short word;
+			memcpy(&word, &tmp[j], 2);
+
+			word = WDL_bswap16(word);
+			memcpy(ptr, &word, 2);
+
+			ptr += num * 2;
+		}
+
+		total += n;
+		ptr -= n * num - 2;
+	}
+
+	buf->Resize(num * size);
+
+	return total == buf->GetSize() ? total : 0;
+}
+
 int read_var_len(FILE* const fp)
 {
 	int len = 0;
@@ -1176,13 +1212,24 @@ int main(const int argc, const char* const* const argv)
 
 	static const char* const roms[] =
 	{
+		#ifdef MU128_UPGRADE_V2_00
 		// Upgrade to v2.00
 		"mu128/V200Q.ydl" // SHA1(9ba008f9343cd1e4a9b255ae393d84517ed3d893)
+		#else // MU128_FIRMWARE_V2_00
+		// IC27 FLASH ROM v2.00
+		"mu128/mu128-v2.00-h.bin", // SHA1(8ed4a6929c66fcb5248e16288dfaf56a3286aaf8)
+		// IC25 FLASH ROM v2.00
+		"mu128/mu128-v2.00-l.bin"  // SHA1(e1ff3387968e89f5bc5df3e15cd0d6039104acd0)
+		#endif
 	};
 
 	WDL_HeapBuf firmware;
 
+	#ifdef MU128_UPGRADE_V2_00
 	if (!read_upgrade(roms[0], &firmware, 2*1024*1024))
+	#else // MU128_FIRMWARE_V2_00
+	if (!read_firmware(&roms[0], &firmware, 2, 1*1024*1024))
+	#endif
 	{
 		return EXIT_FAILURE;
 	}
