@@ -171,6 +171,22 @@ mu100-wave : $(MU100) mu100/xs518b0.ic34 mu100/xs743b0.ic35 mu100/xt445a0-828.ic
 !ENDIF
 	build\mu100.exe -w
 
+MU128 = mu128 mu128/V200Q.ydl
+
+mu128 : build build/mu128.exe
+
+mu128-firmware : $(MU128)
+	build\mu128.exe -f
+
+mu128-midi : $(MU128)
+	build\mu128.exe -m
+
+mu128-table : $(MU128)
+	build\mu128.exe -t > table\mu128.txt
+
+mu128-bitmap : $(MU128)
+	build\mu128.exe -b
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
