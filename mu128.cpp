@@ -1212,7 +1212,12 @@ int main(const int argc, const char* const* const argv)
 
 	static const char* const roms[] =
 	{
-		#ifdef MU128_UPGRADE_V2_00
+		#ifdef MU128_FIRMWARE_V1_06
+		// IC27 XV217C0 FLASH ROM v1.06
+		"mu128/xv217c0.ic27", // SHA1(381e1d146c4e693a21f6e6e4ea2a8b9f6e3033ef)
+		// IC25 XV224C0 FLASH ROM v1.06
+		"mu128/xv224c0.ic25"  // SHA1(56d69f3214899fa25ef5e9ea6c2bbf0c3d378123)
+		#elif defined(MU128_UPGRADE_V2_00)
 		// Upgrade to v2.00
 		"mu128/V200Q.ydl" // SHA1(9ba008f9343cd1e4a9b255ae393d84517ed3d893)
 		#else // MU128_FIRMWARE_V2_00
@@ -1227,7 +1232,7 @@ int main(const int argc, const char* const* const argv)
 
 	#ifdef MU128_UPGRADE_V2_00
 	if (!read_upgrade(roms[0], &firmware, 2*1024*1024))
-	#else // MU128_FIRMWARE_V2_00
+	#else // MU128_FIRMWARE_*
 	if (!read_firmware(&roms[0], &firmware, 2, 1*1024*1024))
 	#endif
 	{
@@ -1255,6 +1260,12 @@ int main(const int argc, const char* const* const argv)
 			+886390
 		};
 
+		#ifdef MU128_FIRMWARE_V1_06
+		static const int rebase = -47224;
+		#else // MU128_FIRMWARE_V2_00
+		static const int rebase = 0;
+		#endif
+
 		static const int m = sizeof(ofs) / sizeof(ofs[0]);
 		int n = 0;
 
@@ -1266,7 +1277,7 @@ int main(const int argc, const char* const* const argv)
 			if (i >= 2) fn[len++] = '0' + (i >> 1);
 			strcpy(&fn[len], ".mid");
 
-			const int size = write_midi(fn, &firmware, ofs[i]);
+			const int size = write_midi(fn, &firmware, ofs[i] + rebase);
 			n += size > 0;
 		}
 
@@ -1278,27 +1289,67 @@ int main(const int argc, const char* const* const argv)
 
 	if (opt == '-t')
 	{
+		static const int ofs_num[][2] =
+		{
+			#ifdef MU128_FIRMWARE_V1_06
+			{ +1474876, 4    },
+			{ +1462396, 48   },
+			{ +1422916, 940  },
+			{ +1422412, 94   },
+			{ +1421900, 4    },
+			{ +1422788, 1    },
+			{ +1322060, 195  },
+			{ +1088496, 1581 },
+			{ +1087572, 461  },
+			{ +1044132, 2715 }
+			#else // MU128_FIRMWARE_V2_00
+			{ +1483552, 6    },
+			{ +1468470, 58   },
+			{ +1428276, 957  },
+			{ +1427636, 94   },
+			{ +1427124, 4    },
+			{ +1428148, 1    },
+			{ +1317044, 215  },
+			{ +1083480, 1581 },
+			{ +1082556, 461  },
+			{ +1039116, 2715 }
+			#endif
+		};
+
+		const int* const ofs = ofs_num[0];
+		const int* const num = &ofs[1];
+
 		printf("MU128 Data Tables\n\n");
 
-		print_drum_banks(&firmware, +1483552, 6); puts("\n--\n");
-		print_drum_kits(&firmware, +1468470, 58); puts("\n--\n");
-		print_drum_voices(&firmware, +1428276, 957); puts("\n--\n");
-		print_sfx_voices(&firmware, +1427636, 94); puts("\n--\n");
+		print_drum_banks(&firmware, ofs[0], num[0]); puts("\n--\n");
+		print_drum_kits(&firmware, ofs[2], num[2]); puts("\n--\n");
+		print_drum_voices(&firmware, ofs[4], num[4]); puts("\n--\n");
+		print_sfx_voices(&firmware, ofs[6], num[6]); puts("\n--\n");
 
-		print_bank_lists(&firmware, +1427124, 4, "MU128"); puts("\n--\n");
-		print_bank_lists(&firmware, +1428148, 1, "TG300B"); puts("\n--\n");
+		print_bank_lists(&firmware, ofs[8], num[8], "MU128"); puts("\n--\n");
+		print_bank_lists(&firmware, ofs[10], num[10], "TG300B"); puts("\n--\n");
+
+		#ifndef MU128_FIRMWARE_V1_06
 		print_bank_lists(&firmware, +1484320, 2, "GM"); puts("\n--\n");
-		print_program_banks(&firmware, +1317044, 215); puts("\n--\n");
-		print_normal_voices(&firmware, +1083480, 1581); puts("\n--\n");
+		#endif
 
-		print_sample_sets(&firmware, +1082556, 461); puts("\n--\n");
-		print_samples(&firmware, +1039116, 2715);
+		print_program_banks(&firmware, ofs[12], num[12]); puts("\n--\n");
+		print_normal_voices(&firmware, ofs[14], num[14]); puts("\n--\n");
+
+		print_sample_sets(&firmware, ofs[16], num[16]); puts("\n--\n");
+		print_samples(&firmware, ofs[18], num[18]);
 
 		return EXIT_SUCCESS;
 	}
 
 	if (opt == '-b')
 	{
+		#ifdef MU128_FIRMWARE_V1_06
+		static const int ofs = +898124, num = 705;
+		#else // MU128_FIRMWARE_V2_00
+		static const int ofs = +906324, num = 541;
+		#endif
+
 		FILE* const fp = fopen("table/mu128_bitmap.txt", "wb");
 		if (!fp) return EXIT_FAILURE;
 
@@ -1306,7 +1357,7 @@ int main(const int argc, const char* const* const argv)
 		fwrite(&bom, 2, 1, fp);
 
 		write_utf16_str("MU128 Bitmaps\n\n", fp);
-		const int n = print_bitmaps(fp, &firmware, +906324, 541);
+		const int n = print_bitmaps(fp, &firmware, ofs, num);
 
 		printf("%d\n", n);
 		return EXIT_SUCCESS;
