@@ -75,7 +75,7 @@ mu15-wave : $(MU15)
 !ENDIF
 	build\mu15.exe -w
 
-MU50 = mu50 mu50/yamaha_mu50.bin
+MU50 = mu50 mu50/xr174c0.ic7
 
 mu50 : build build/mu50.exe
 

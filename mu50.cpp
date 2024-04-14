@@ -1087,8 +1087,13 @@ int main(const int argc, const char* const* const argv)
 
 	static const char* const roms[] =
 	{
+		#ifdef MU50_FIRMWARE_V1_04
 		// IC7 PROGRAM ROM 4M v1.04
 		"mu50/yamaha_mu50.bin", // SHA1(58c41f10d292cac35ef0e8f93029fbc4685df586)
+		#else // MU50_FIRMWARE_V1_05
+		// IC7 XR174C0 PROGRAM ROM 4M v1.05
+		"mu50/xr174c0.ic7", // SHA1(9ca892920598f9fdf08544dac4c0e54e7d46ee3c)
+		#endif
 
 		// IC18 XQ057C0 WAVE ROM 1 16M
 		"mu50/xq057c0.ic18", // SHA1(32f653c7644d060f5a6d63a435ae3a7412386d92)
@@ -1122,9 +1127,15 @@ int main(const int argc, const char* const* const argv)
 
 	if (opt == '-t')
 	{
+		#ifdef MU50_FIRMWARE_V1_04
+		static const int rebase = -128;
+		#else // MU50_FIRMWARE_V1_05
+		static const int rebase = 0;
+		#endif
+
 		printf("MU50 Data Tables\n\n");
 
-		print_drum_banks(&firmware, +141786, 3); puts("\n--\n");
+		print_drum_banks(&firmware, +141914 + rebase, 3); puts("\n--\n");
 		print_drum_kits(&firmware, +454886, 23); puts("\n--\n");
 		print_drum_voices(&firmware, +444296, 353); puts("\n--\n");
 
@@ -1140,6 +1151,12 @@ int main(const int argc, const char* const* const argv)
 
 	if (opt == '-b')
 	{
+		#ifdef MU50_FIRMWARE_V1_04
+		static const int rebase = -60;
+		#else // MU50_FIRMWARE_V1_05
+		static const int rebase = 0;
+		#endif
+
 		FILE* const fp = fopen("table/mu50_bitmap.txt", "wb");
 		if (!fp) return EXIT_FAILURE;
 
@@ -1148,8 +1165,8 @@ int main(const int argc, const char* const* const argv)
 
 		write_utf16_str("MU50 Bitmaps\n\n", fp);
 
-		int n = print_bitmaps(fp, &firmware, +157918, 279);
-		n += print_bitmaps(fp, &firmware, +201478, 140);
+		int n = print_bitmaps(fp, &firmware, +157978 + rebase, 279);
+		n += print_bitmaps(fp, &firmware, +201538 + rebase, 140);
 
 		fclose(fp);
 		if (!n) return EXIT_FAILURE;
