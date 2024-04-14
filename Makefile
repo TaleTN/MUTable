@@ -147,6 +147,30 @@ mu90-wave : $(MU90) mu90/xs518a0.ic22 mu90/xs743a0.ic23
 !ENDIF
 	build\mu90.exe -w
 
+MU100 = mu100 mu100/xu50720.ic11
+
+mu100 : build build/mu100.exe
+
+mu100-firmware : $(MU100)
+	build\mu100.exe -f
+
+mu100-midi : $(MU100)
+	build\mu100.exe -m
+
+mu100-table : $(MU100)
+	build\mu100.exe -t > table\mu100.txt
+
+mu100-bitmap : $(MU100)
+	build\mu100.exe -b
+
+mu100-wave : $(MU100) mu100/xs518b0.ic34 mu100/xs743b0.ic35 mu100/xt445a0-828.ic36 mu100/xt461a0-829.ic37 mu100/xt462a0.ic39 mu100/xt463a0.ic38
+!IF !EXIST("wave/mu100/")
+	@mkdir wave\mu100
+!ELSE
+	@del wave\mu100\*.wav
+!ENDIF
+	build\mu100.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
