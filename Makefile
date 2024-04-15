@@ -288,6 +288,21 @@ tg100-wave : $(TG100) tg100/xk992a0.ic6
 !ENDIF
 	build\tg100.exe -w
 
+YRW801 = yrw801 yrw801/yrw801.rom
+
+yrw801 : build build/yrw801.exe
+
+yrw801-table : $(YRW801)
+	build\yrw801.exe -t > table\yrw801.txt
+
+yrw801-wave : $(YRW801)
+!IF !EXIST("wave/yrw801/")
+	@mkdir wave\yrw801
+!ELSE
+	@del wave\yrw801\*.wav
+!ENDIF
+	build\yrw801.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
