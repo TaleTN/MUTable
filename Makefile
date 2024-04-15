@@ -267,6 +267,27 @@ syxg50-wave : $(SYXG50) syxg50/Sxgwave4.tbl
 !ENDIF
 	build\syxg50.exe -w
 
+TG100 = tg100 tg100/xk731c0.ic4
+
+tg100 : build build/tg100.exe
+
+tg100-midi : $(TG100)
+	build\tg100.exe -m
+
+tg100-font : $(TG100)
+	build\tg100.exe -b
+
+tg100-table : $(TG100) tg100/xk992a0.ic6
+	build\tg100.exe -t > table\tg100.txt
+
+tg100-wave : $(TG100) tg100/xk992a0.ic6
+!IF !EXIST("wave/tg100/")
+	@mkdir wave\tg100
+!ELSE
+	@del wave\tg100\*.wav
+!ENDIF
+	build\tg100.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
