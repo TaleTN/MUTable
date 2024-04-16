@@ -231,6 +231,27 @@ mu128-wave : $(MU128) mu128/xv364a0.ic53 mu128/xv365a0.ic54 mu128/xv366a0.ic57 m
 !ENDIF
 	build\mu128.exe -w
 
+SW1000XG = sw1000xg sw1000xg/1.06.06_xv561d0.ic102
+
+sw1000xg : build build/sw1000xg.exe
+
+sw1000xg-firmware : $(SW1000XG)
+	build\sw1000xg.exe -f
+
+sw1000xg-midi : $(SW1000XG)
+	build\sw1000xg.exe -m
+
+sw1000xg-table : $(SW1000XG)
+	build\sw1000xg.exe -t > table\sw1000xg.txt
+
+sw1000xg-wave : $(SW1000XG) sw1000xg/xt445a0-828.ic124 sw1000xg/xt461a0-829.ic123 sw1000xg/xv389a0.ic122 sw1000xg/xv390a0.ic121
+!IF !EXIST("wave/sw1000xg/")
+	@mkdir wave\sw1000xg
+!ELSE
+	@del wave\sw1000xg\*.wav
+!ENDIF
+	build\sw1000xg.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
