@@ -12,6 +12,24 @@ CPPFLAGS = /O2 /D WDL_NO_SUPPORT_UTF8 /D _CRT_SECURE_NO_WARNINGS /W3 /nologo
 CPPFLAGS = $(CPPFLAGS) /D MUTABLE_EXTRACT_DUPLICATES
 !ENDIF
 
+DB50XG = db50xg db50xg/xr253a0.ic7
+
+db50xg : build build/db50xg.exe
+
+db50xg-firmware : $(DB50XG)
+	build\db50xg.exe -f
+
+db50xg-table : $(DB50XG)
+	build\db50xg.exe -t > table\db50xg.txt
+
+db50xg-wave : $(DB50XG) db50xg/xq730b0.ic9 db50xg/xq731b0.ic10
+!IF !EXIST("wave/db50xg/")
+	@mkdir wave\db50xg
+!ELSE
+	@del wave\db50xg\*.wav
+!ENDIF
+	build\db50xg.exe -w
+
 MU5 = mu5 mu5/yamaha_mu5_program_xq201a0.bin
 
 mu5 : build build/mu5.exe
