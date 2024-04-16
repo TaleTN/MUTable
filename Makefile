@@ -30,6 +30,24 @@ db50xg-wave : $(DB50XG) db50xg/xq730b0.ic9 db50xg/xq731b0.ic10
 !ENDIF
 	build\db50xg.exe -w
 
+DB60XG = db60xg db60xg/xr560b0.ic7
+
+db60xg : build build/db60xg.exe
+
+db60xg-firmware : $(DB60XG)
+	build\db60xg.exe -f
+
+db60xg-table : $(DB60XG)
+	build\db60xg.exe -t > table\db60xg.txt
+
+db60xg-wave : $(DB60XG) db60xg/xq730b0.ic9 db60xg/xq731b0.ic10
+!IF !EXIST("wave/db60xg/")
+	@mkdir wave\db60xg
+!ELSE
+	@del wave\db60xg\*.wav
+!ENDIF
+	build\db60xg.exe -w
+
 MU5 = mu5 mu5/yamaha_mu5_program_xq201a0.bin
 
 mu5 : build build/mu5.exe
