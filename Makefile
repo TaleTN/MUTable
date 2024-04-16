@@ -123,6 +123,30 @@ mu80-wave : $(MU80) mu80/xq012b0-822.bin mu80/xq013b0-823.bin mu80/xq089b0-824.b
 !ENDIF
 	build\mu80.exe -w
 
+MU90 = mu90 mu90/xs519d0.ic9
+
+mu90 : build build/mu90.exe
+
+mu90-firmware : $(MU90)
+	build\mu90.exe -f
+
+mu90-midi : $(MU90)
+	build\mu90.exe -m
+
+mu90-table : $(MU90)
+	build\mu90.exe -t > table\mu90.txt
+
+mu90-bitmap : $(MU90)
+	build\mu90.exe -b
+
+mu90-wave : $(MU90) mu90/xs518a0.ic22 mu90/xs743a0.ic23
+!IF !EXIST("wave/mu90/")
+	@mkdir wave\mu90
+!ELSE
+	@del wave\mu90\*.wav
+!ENDIF
+	build\mu90.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
