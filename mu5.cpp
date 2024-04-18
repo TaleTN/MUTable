@@ -192,13 +192,58 @@ void print_drum_kits(const WDL_HeapBuf* const firmware, const int ofs, const int
 		{
 			if (!(j % 10)) printf("\n%-5d ", j);
 
-			const int drum_voice_no = (ptr[0] << 8) | ptr[1];
-			printf("| %-6d ", drum_voice_no);
+			const int drum_voice_ofs = ((ptr[0] << 8) | ptr[1]) * 6;
+			printf("| %-+6d ", drum_voice_ofs);
 
 			ptr += 2;
 		}
 
 		putchar('\n');
+	}
+}
+
+/* Drum Voices
+
+Offset  | Size | Data            | Parameter                    | Description              | Default
+--------+------+-----------------+------------------------------+--------------------------+---------
++0      | 2    | 0000   - 03FF   | Wavetable#                   | 0 - 1023                 |
++2      | 1    | 80     - 7F     | Pitch coarse                 | -128 - +127 [semitone]   | 00
++3      | 1    | 00     - 63     | Pitch fine                   | 0 - 99 [cent]            | 00
++4      | 1    | 00     - 7F     | Attenuation                  | 0 - 127                  | 00
++5      | 1    | Bit 4  - 7      | Reverb depth                 | 0 - 8                    | 00
+        |      | Bit 0  - 3      | Panpot                       | L7 - R7                  |
+
+*/
+void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num)
+{
+	printf("Drum Voices (+%d)\n", ofs);
+
+	static const char* const hdr  = "Offset  | Wavetbl | PC   | PF  | Atn | Rev | Pan ";
+	static const char* const line = "--------+---------+------+-----+-----+-----+-----";
+
+	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
+	ofs = 0;
+
+	for (int i = 0; i < num; ++i)
+	{
+		if (!(i % 25))
+		{
+			if (!i) putchar('\n'); else puts(line);
+			puts(hdr);
+			puts(line);
+		}
+
+		printf("%-+7d | ", ofs);
+
+		const int wavetbl_ofs = ((ptr[0] << 8) | ptr[1]) * 12;
+		printf("%-+7d | ", wavetbl_ofs);
+
+		printf("%-+4d | %-+3d | ", (signed char)ptr[2], ptr[3]);
+		printf("%-3d | ", ptr[4]);
+		printf("%-3d | %-+3d \n", ptr[5] >> 4, ((int)ptr[5] << 28) >> 28);
+
+		ptr += 6;
+		ofs += 6;
 	}
 }
 
@@ -631,6 +676,8 @@ int main(const int argc, const char* const* const argv)
 
 		print_drum_bank(&firmware, +62506); puts("\n--\n");
 		print_drum_kits(&firmware, +108644, 8); puts("\n--\n");
+		print_drum_voices(&firmware, +105620, 504); puts("\n--\n");
+
 		print_normal_voices(&firmware, +110948, 128); puts("\n--\n");
 
 		print_sample_sets(&firmware, +105340, 140 + 1); puts("\n--\n");
