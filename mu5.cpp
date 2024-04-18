@@ -431,6 +431,92 @@ void print_samples(const WDL_HeapBuf* const firmware, int ofs, const int num)
 	}
 }
 
+void write_utf16_str(const char* const str, FILE* const fp)
+{
+	for (int i = 0;; ++i)
+	{
+		const unsigned short c = str[i];
+		if (!c) break;
+
+		#ifdef _WIN32
+		if (c == '\n')
+		{
+			static const unsigned short cr = '\r';
+			fwrite(&cr, 2, 1, fp);
+		}
+		#endif
+
+		fwrite(&c, 2, 1, fp);
+	}
+}
+
+int print_bitmaps(FILE* const fp, const WDL_HeapBuf* const firmware, int ofs, const int num)
+{
+	static const unsigned short block[4][2] =
+	{
+		{ ' ',    ' '    }, // Space
+		{ 0x2580, 0x2580 }, // Upper half block
+		{ 0x2584, 0x2584 }, // Lower half block
+		{ 0x2588, 0x2588 }  // Full block
+	};
+
+	#ifdef _WIN32
+	static const size_t n = 2;
+	const unsigned short eol[n] = { '\r', '\n' };
+	#else
+	static const size_t n = 1;
+	const unsigned short eol[n] = { '\n' };
+	#endif
+
+	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
+
+	for (int i = 0; i < num; ++i)
+	{
+		char str[16];
+		sprintf(str, "+%d\n\n", ofs);
+
+		write_utf16_str(str, fp);
+
+		const unsigned char* ptr2 = &ptr[8];
+		ptr += 16;
+
+		for (int j = 0; j < 2; ++j)
+		{
+			for (int k = 0; k < 8;)
+			{
+				unsigned short line[2];
+
+				for (int l = 0; l < 2; ++k, ++l)
+				{
+					line[l] = ((ptr2[k & 3] >> ((k >> 2) ^ 1)) << 15) | ((ptr[0] & 0x1F) << 10) | ((ptr[8] & 0x1F) << 5) | (ptr[16] & 0x1F);
+					ptr++;
+				}
+
+				static const unsigned short space = ' ';
+				fwrite(&space, 2, 1, fp);
+
+				for (int l = 0x8000; l; l >>= 1)
+				{
+					const int bit1 = !!(line[0] & l);
+					const int bit2 = !!(line[1] & l);
+
+					fwrite(block[(bit2 << 1) | bit1], 2, 2, fp);
+				}
+
+				fwrite(eol, 2, n, fp);
+			}
+
+			ptr += 16;
+			ptr2 += 4;
+		}
+
+		fwrite(eol, 2, n, fp);
+		ofs += 64;
+	}
+
+	return num;
+}
+
 int read_wavetbl(const char* const filename, WDL_HeapBuf* const buf, const int size)
 {
 	return read_firmware(filename, buf, size);
@@ -663,6 +749,24 @@ int main(const int argc, const char* const* const argv)
 		return EXIT_SUCCESS;
 	}
 
+	if (opt == '-b')
+	{
+		FILE* const fp = fopen("table/mu5_bitmap.txt", "wb");
+		if (!fp) return EXIT_FAILURE;
+
+		static const unsigned short bom = 0xFEFF;
+		fwrite(&bom, 2, 1, fp);
+
+		write_utf16_str("MU5 Bitmaps\n\n", fp);
+		const int n = print_bitmaps(fp, &firmware, +61254, 8);
+
+		fclose(fp);
+		if (!n) return EXIT_FAILURE;
+
+		printf("%d\n", n);
+		return EXIT_SUCCESS;
+	}
+
 	WDL_HeapBuf wavetbl;
 
 	if (!read_wavetbl(roms[1], &wavetbl, 2*1024*1024))
@@ -698,6 +802,6 @@ int main(const int argc, const char* const* const argv)
 		return EXIT_SUCCESS;
 	}
 
-	printf("Usage: %s -m | -t | -w\n", argv[0]);
+	printf("Usage: %s -m | -b | -t | -w\n", argv[0]);
 	return EXIT_FAILURE;
 }

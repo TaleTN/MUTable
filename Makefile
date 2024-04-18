@@ -19,6 +19,9 @@ mu5 : build build/mu5.exe
 mu5-midi : $(MU5)
 	build\mu5.exe -m
 
+mu5-bitmap : $(MU5)
+	build\mu5.exe -b
+
 mu5-table : $(MU5) mu5/yamaha_mu5_waverom_xp50280-801.bin
 	build\mu5.exe -t > table\mu5.txt
 
