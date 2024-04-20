@@ -353,6 +353,28 @@ void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num
 	}
 }
 
+void print_sfx_voices(const WDL_HeapBuf* const firmware, const int normal_voices, const int ofs, const int num)
+{
+	printf("SFX Voices (+%d)\n\n", ofs);
+
+	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
+
+	printf("SFX#  "); for (int i = 0; i < 10; ++i) printf("| %-7d ", i);
+	printf("\n------"); for (int i = 0; i < 10; ++i) printf("+---------");
+
+	for (int i = 0; i < num; ++i)
+	{
+		if (!(i % 10)) printf("\n%-5d ", i);
+
+		const int normal_voice_ofs = ((ptr[0] << 24) | (ptr[1] << 16) | (ptr[2] << 8) | ptr[3]) - normal_voices;
+		printf("| %-+7d ", normal_voice_ofs);
+
+		ptr += 4;
+	}
+
+	putchar('\n');
+}
+
 void print_bank_lists(const WDL_HeapBuf* const firmware, const int ofs, const int num)
 {
 	printf("Bank Lists (+%d)\n", ofs);
@@ -1127,17 +1149,23 @@ int main(const int argc, const char* const* const argv)
 
 	if (opt == '-t')
 	{
-		#ifdef MU50_FIRMWARE_V1_04
-		static const int rebase = -128;
-		#else // MU50_FIRMWARE_V1_05
-		static const int rebase = 0;
-		#endif
+		static const int ofs[] =
+		{
+			#ifdef MU50_FIRMWARE_V1_04
+			+141786,
+			+242574
+			#else // MU50_FIRMWARE_V1_05
+			+141914,
+			+242634
+			#endif
+		};
 
 		printf("MU50 Data Tables\n\n");
 
-		print_drum_banks(&firmware, +141914 + rebase, 3); puts("\n--\n");
+		print_drum_banks(&firmware, ofs[0], 3); puts("\n--\n");
 		print_drum_kits(&firmware, +454886, 23); puts("\n--\n");
 		print_drum_voices(&firmware, +444296, 353); puts("\n--\n");
+		print_sfx_voices(&firmware, +323584, ofs[1], 87); puts("\n--\n");
 
 		print_bank_lists(&firmware, +443910, 3); puts("\n--\n");
 		print_program_banks(&firmware, +425734, 71); puts("\n--\n");
