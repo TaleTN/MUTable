@@ -33,6 +33,24 @@ mu5-wave : $(MU5) mu5/yamaha_mu5_waverom_xp50280-801.bin
 !ENDIF
 	build\mu5.exe -w
 
+MU10 = mu10 mu10/xs289a0.ic07
+
+mu10 : build build/mu10.exe
+
+mu10-firmware : $(MU10)
+	build\mu10.exe -f
+
+mu10-table : $(MU10)
+	build\mu10.exe -t > table\mu10.txt
+
+mu10-wave : $(MU10) mu10/xr709a0.ic11
+!IF !EXIST("wave/mu10/")
+	@mkdir wave\mu10
+!ELSE
+	@del wave\mu10\*.wav
+!ENDIF
+	build\mu10.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
