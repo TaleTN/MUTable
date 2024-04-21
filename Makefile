@@ -51,6 +51,30 @@ mu10-wave : $(MU10) mu10/xr709a0.ic11
 !ENDIF
 	build\mu10.exe -w
 
+MU15 = mu15 mu15/xv684c0.bin
+
+mu15 : build build/mu15.exe
+
+mu15-firmware : $(MU15)
+	build\mu15.exe -f
+
+mu15-midi : $(MU15)
+	build\mu15.exe -m
+
+mu15-table : $(MU15)
+	build\mu15.exe -t > table\mu15.txt
+
+mu15-bitmap : $(MU15)
+	build\mu15.exe -b
+
+mu15-wave : $(MU15)
+!IF !EXIST("wave/mu15/")
+	@mkdir wave\mu15
+!ELSE
+	@del wave\mu15\*.wav
+!ENDIF
+	build\mu15.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
