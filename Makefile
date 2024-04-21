@@ -252,6 +252,21 @@ sw1000xg-wave : $(SW1000XG) sw1000xg/xt445a0-828.ic124 sw1000xg/xt461a0-829.ic12
 !ENDIF
 	build\sw1000xg.exe -w
 
+SYXG50 = syxg50 syxg50/sxgbin41.tbl
+
+syxg50 : build build/syxg50.exe
+
+syxg50-table : $(SYXG50)
+	build\syxg50.exe -t > table\syxg50.txt
+
+syxg50-wave : $(SYXG50) syxg50/Sxgwave4.tbl
+!IF !EXIST("wave/syxg50/")
+	@mkdir wave\syxg50
+!ELSE
+	@del wave\syxg50\*.wav
+!ENDIF
+	build\syxg50.exe -w
+
 build :
 !IF !EXIST("build/")
 	@mkdir build
