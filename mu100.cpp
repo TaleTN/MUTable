@@ -1325,8 +1325,19 @@ int main(const int argc, const char* const* const argv)
 
 	static const char* const roms[] =
 	{
+		#ifdef MU100_FIRMWARE_V1_03
+		// IC11 XT714E0 EPROM 16M v1.03
+		"mu100/xt714e0.ic11", // SHA1(a81f988a315efe92106f1e7d407cd3626c4f843f)
+		#elif defined(MU100_FIRMWARE_V1_05)
+		// IC11 XT71420 EPROM 16M v1.05
+		"mu100/xt71420.ic11", // SHA1(3148c5bd59a3d00809d3ab1921216215fe2582c5)
+		#elif defined(MU100B_FIRMWARE_V1_08)
+		// IC11 xu50710 EPROM 16M v1.08
+		"mu100/mu100b/xu50710-m27c160.bin", // SHA1(12d7c6e1bce7974b34916e1bfa5057ab55867476)
+		#else // MU100B_FIRMWARE_V1_11
 		// IC11 XU50720 EPROM 16M v1.11
 		"mu100/xu50720.ic11", // SHA1(e90b8bd9d14297da26ba12f4d9a4f2d22cd7d34a)
+		#endif
 
 		// IC34 XS518B0 WAVE ROM 1 32M
 		"mu100/xs518b0.ic34", // SHA1(fd3cce228c7d389a2fde25c808a5b26080588cba)
@@ -1419,6 +1430,16 @@ int main(const int argc, const char* const* const argv)
 
 	if (opt == '-b')
 	{
+		#ifdef MU100_FIRMWARE_V1_03
+		static const int ofs = +323878;
+		#elif defined(MU100_FIRMWARE_V1_05)
+		static const int ofs = +323892;
+		#elif defined(MU100B_FIRMWARE_V1_08)
+		static const int ofs = +324684;
+		#else // MU100B_FIRMWARE_V1_11
+		static const int ofs = +324882;
+		#endif
+
 		FILE* const fp = fopen("table/mu100_bitmap.txt", "wb");
 		if (!fp) return EXIT_FAILURE;
 
@@ -1426,7 +1447,7 @@ int main(const int argc, const char* const* const argv)
 		fwrite(&bom, 2, 1, fp);
 
 		write_utf16_str("MU100 Bitmaps\n\n", fp);
-		const int n = print_bitmaps(fp, &firmware, +324882, 713);
+		const int n = print_bitmaps(fp, &firmware, ofs, 713);
 
 		fclose(fp);
 		if (!n) return EXIT_FAILURE;
