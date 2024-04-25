@@ -327,7 +327,8 @@ Offset  | Size | Data            | Parameter                 | Description      
 +29     | 1    | C5     - 34     | ?                         | ?                           | 00
 +30     | 1    | 00     - 6C     | ?                         | ?                           | 00
 +31     | 3    | 000000 - FFFFFF | Attack length             | 0 - 16777215 [samples]      | 000000
-+34     | 1    | 00     - 80     | ?                         | ?                           | 00
++34     | 1    | Bit 7           | Reverse playback          | 0:normal, 1:reverse         | 00
+        |      | Bit 0  - 6      | ?                         | ?                           |
 +35     | 3    | 000000 - FFFFFF | Loop length               | 0 - 16777215 [samples]      | 000000
 +38     | 1    | Bit 6  - 7      | Sample format             | 0:16, 1:12, 2:8-bit, 3:DPCM | 00
         |      | Bit 3  - 5      | DPCM scale                | 2^0 - 2^7                   |
@@ -340,9 +341,9 @@ void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num
 {
 	printf("Drum Voices (+%d)\n", ofs);
 
-	static const char* const hdr  = "                                                                 Voice                                                                  |                                     Sample                                      \n"
-	                                "Offset  | PC  | PF  | Lvl | Alt | Pan | Rev | Cho | Var | K | 0 | 1 | Cut | Q   | A   | D1  | D2  | ?  | LG  | LF | HG  | HF | ?        | SFX#  | Rat | PF   | PC   | ?     | Attack   | ?  | Loop     | F | D8 | Address ";
-	static const char* const line = "--------+-----+-----+-----+-----+-----+-----+-----+-----+---+---+---+-----+-----+-----+-----+-----+----+-----+----+-----+----+----------+-------+-----+------+------+-------+----------+----+----------+---+----+---------";
+	static const char* const hdr  = "                                                                 Voice                                                                  |                                       Sample                                        \n"
+	                                "Offset  | PC  | PF  | Lvl | Alt | Pan | Rev | Cho | Var | K | 0 | 1 | Cut | Q   | A   | D1  | D2  | ?  | LG  | LF | HG  | HF | ?        | SFX#  | Rat | PF   | PC   | ?     | Attack   | R | ?  | Loop     | F | D8 | Address ";
+	static const char* const line = "--------+-----+-----+-----+-----+-----+-----+-----+-----+---+---+---+-----+-----+-----+-----+-----+----+-----+----+-----+----+----------+-------+-----+------+------+-------+----------+---+----+----------+---+----+---------";
 
 	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
 	ofs = 0;
@@ -385,12 +386,13 @@ void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num
 		printf("| ");
 
 		const int attack = (ptr[31] << 16) | (ptr[32] << 8) | ptr[33];
+		const int reverse = ptr[34] >> 7;
 		const int loop = (ptr[35] << 16) | (ptr[36] << 8) | ptr[37];
 		const int format = ptr[38] >> 6, dpcm = (ptr[38] >> 1) & 0x1F;
 		const int addr = (((ptr[38] & 0x01) << 24) | (ptr[39] << 16) | (ptr[40] << 8) | ptr[41]) << 2;
 
 		printf("%-8d | ", attack);
-		printf("%02X | %-8d | ", ptr[34], loop);
+		printf("%d | %02X | %-8d | ", reverse, ptr[34] & 0x7F, loop);
 		printf("%d | %02X | %07X \n", format, dpcm, addr);
 
 		ptr += 42;
@@ -903,7 +905,8 @@ Offset  | Size | Data            | Parameter                 | Description      
 +3      | 1    | 00     - 7F     | Note limit high           | 0 - 127 [note]              | 7F
 +4      | 1    | 00     - 6C     | ?                         | ?                           | 00
 +5      | 3    | 000000 - FFFFFF | Attack length             | 0 - 16777215 [samples]      | 000000
-+8      | 1    | 80     - 7F     | ?                         | ?                           | 00
++8      | 1    | Bit 7           | Reverse playback          | 0:normal, 1:reverse         | 00
+        |      | Bit 0  - 6      | ?                         | ?                           |
 +9      | 3    | 000000 - FFFFFF | Loop length               | 0 - 16777215 [samples]      | 000000
 +12     | 1    | Bit 6  - 7      | Sample format             | 0:16, 1:12, 2:8-bit, 3:DPCM | 00
         |      | Bit 3  - 5      | DPCM scale                | 2^0 - 2^7                   |
@@ -918,8 +921,8 @@ void print_samples(const WDL_HeapBuf* const firmware, int ofs, const int num, co
 	if (title) printf("%s ", title);
 	printf("(+%d)\n", ofs);
 
-	static const char* const hdr  = "Offset  | Atn | PC   | PF   | N   | ?  | Attack   | ?  | Loop     | F | D8 | Address ";
-	static const char* const line = "--------+-----+------+------+-----+----+----------+----+----------+---+----+---------";
+	static const char* const hdr  = "Offset  | Atn | PC   | PF   | N   | ?  | Attack   | R | ?  | Loop     | F | D8 | Address ";
+	static const char* const line = "--------+-----+------+------+-----+----+----------+---+----+----------+---+----+---------";
 
 	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
 	ofs = 0;
@@ -940,12 +943,13 @@ void print_samples(const WDL_HeapBuf* const firmware, int ofs, const int num, co
 		printf("%-3d | ", ptr[3]);
 
 		const int attack = (ptr[5] << 16) | (ptr[6] << 8) | ptr[7];
+		const int reverse = ptr[8] >> 7;
 		const int loop = (ptr[9] << 16) | (ptr[10] << 8) | ptr[11];
 		const int format = ptr[12] >> 6, dpcm = (ptr[12] >> 1) & 0x1F;
 		const int addr = (((ptr[12] & 0x01) << 24) | (ptr[13] << 16) | (ptr[14] << 8) | ptr[15]) << 2;
 
 		printf("%02X | %-8d | ", ptr[4], attack);
-		printf("%02X | %-8d | ", ptr[8], loop);
+		printf("%d | %02X | %-8d | ", reverse, ptr[8] & 0x7F, loop);
 		printf("%d | %02X | %07X \n", format, dpcm, addr);
 
 		ptr += 16;
@@ -1122,12 +1126,12 @@ void write_cue_points(WaveWriter* const wav, const int num, const int loop, cons
 	wav->WriteChunk(cue, (3 + num * 6) * sizeof(int));
 }
 
-int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, const int format, const int addr, const int attack, const int loop, const int dpcm = 0)
+int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, const int format, const int addr, const int attack, const int loop, const bool reverse = false, const int dpcm = 0)
 {
 	const unsigned char* const buf = (const unsigned char*)wavetbl->Get() + get_wavetbl_addr(addr);
 
 	static const int extra = 3;
-	const int len = attack + loop + extra;
+	const int len = attack + loop + extra, n = len - 1;
 
 	WaveWriter wav;
 	if (!wav.Open(filename, format == 2 ? 8 : 16, 1, 44100, 0)) return 0;
@@ -1137,16 +1141,18 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 		// 16-bit signed linear PCM
 		case 0:
 		{
-			const unsigned char* ptr = buf - (attack << 1);
+			const unsigned char* const base = buf - (attack << 1);
 
-			for (int i = 0; i < len; ++i)
+			for (int i = 0; i <= n; ++i)
 			{
+				int j = n - i;
+				j = !reverse ? i : j;
+
+				const unsigned char* const ptr = &base[j << 1];
 				short sample = ptr[0] | (ptr[1] << 8);
 
 				sample = WDL_bswap16_if_be(sample);
 				wav.WriteRaw(&sample, 2);
-
-				ptr += 2;
 			}
 			break;
 		}
@@ -1154,21 +1160,20 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 		// 12-bit signed linear PCM
 		case 1:
 		{
-			const unsigned char* ptr = buf - (attack >> 1) * 3;
+			const unsigned char* const base = buf - (attack >> 1) * 3;
 
-			for (int i = 0; i < len; ++i)
+			for (int i = 0; i <= n; ++i)
 			{
+				int j = n - i;
+				j = !reverse ? i : j;
+
+				const unsigned char* const ptr = &base[(j >> 1) * 3];
 				short sample;
 
 				if (!(i & 1))
-				{
 					sample = (ptr[0] << 4) | (ptr[1] << 12);
-				}
 				else
-				{
 					sample = (ptr[1] & 0xF0) | (ptr[2] << 8);
-					ptr += 3;
-				}
 
 				sample = WDL_bswap16_if_be(sample);
 				wav.WriteRaw(&sample, 2);
@@ -1179,11 +1184,14 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 		// 8-bit signed linear PCM
 		case 2:
 		{
-			const unsigned char* const ptr = buf - attack;
+			const unsigned char* const base = buf - attack;
 
-			for (int i = 0; i < len; ++i)
+			for (int i = 0; i <= n; ++i)
 			{
-				unsigned char sample = ptr[i] ^ 0x80;
+				int j = n - i;
+				j = !reverse ? i : j;
+
+				unsigned char sample = base[j] ^ 0x80;
 				wav.WriteRaw(&sample, 1);
 			}
 			break;
@@ -1212,12 +1220,15 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 			static const unsigned char ofs_tbl[4] = { 7, 6, 4, 0 };
 			const int ofs = ofs_tbl[dpcm & 3], scale = (dpcm >> 2) & 7;
 
-			const unsigned char* const ptr = buf - attack;
+			const unsigned char* const base = buf - attack;
 			int sum = 0;
 
-			for (int i = 0; i < len; ++i)
+			for (int i = 0; i <= n; ++i)
 			{
-				const int step = ptr[i];
+				int j = n - i;
+				j = !reverse ? i : j;
+
+				const int step = base[j];
 
 				const int delta = log_tbl[step & 0x7F];
 				const int min_delta = -delta;
@@ -1249,6 +1260,7 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 int extract_sample(const char* const filename, const int ofs, const WDL_HeapBuf* const wavetbl, const unsigned char* const ptr)
 {
 	const int attack = (ptr[0] << 16) | (ptr[1] << 8) | ptr[2];
+	const int reverse = ptr[3] >> 7;
 	const int loop = (ptr[4] << 16) | (ptr[5] << 8) | ptr[6];
 
 	if (!(attack || loop)) return 0;
@@ -1259,29 +1271,30 @@ int extract_sample(const char* const filename, const int ofs, const WDL_HeapBuf*
 	#ifndef MUTABLE_EXTRACT_DUPLICATES
 
 	static const int max_samples = 1925;
-	static unsigned char sample_list[max_samples][10];
+	static unsigned char sample_list[max_samples][11];
 
 	static int num_samples = 0;
-	unsigned char hash[10];
 
-	memcpy(&hash[0], &ptr[0], 3);
-	memcpy(&hash[3], &ptr[4], 7);
-	hash[6] = (format << 6) | (format == 3 ? dpcm : 0);
+	unsigned char hash[11];
+	memcpy(hash, ptr, 11);
+
+	hash[3] = reverse << 7;
+	hash[7] = (format << 6) | (format == 3 ? dpcm : 0);
 
 	for (int i = 0; i < num_samples; ++i)
 	{
-		if (!memcmp(sample_list[i], hash, 10)) return 0;
+		if (!memcmp(sample_list[i], hash, 11)) return 0;
 	}
 
 	assert(num_samples < max_samples);
-	memcpy(sample_list[num_samples++], hash, 10);
+	memcpy(sample_list[num_samples++], hash, 11);
 
 	#endif
 
 	char fn[128];
 	sprintf(fn, filename, ofs);
 
-	return write_sample(fn, wavetbl, format, addr, attack, loop, dpcm);
+	return write_sample(fn, wavetbl, format, addr, attack, loop, reverse, dpcm);
 }
 
 int extract_drum_samples(const char* const filename, const WDL_HeapBuf* const firmware, int ofs, const int num, const WDL_HeapBuf* const wavetbl)
