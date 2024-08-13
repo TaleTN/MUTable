@@ -252,6 +252,30 @@ mu1000-wave : $(MU1000) mu2000/xv364a0.ic49 mu2000/xv365a0.ic50 mu2000/xw848a0.i
 !ENDIF
 	build\mu1000.exe -w
 
+MU2000 = mu2000 mu2000/mu2000-v2.01-h.bin mu2000/mu2000-v2.01-l.bin
+
+mu2000 : build build/mu2000.exe
+
+mu2000-firmware : $(MU2000)
+	build\mu2000.exe -f
+
+mu2000-midi : $(MU2000)
+	build\mu2000.exe -m
+
+mu2000-table : $(MU2000)
+	build\mu2000.exe -t > table\mu2000.txt
+
+mu2000-bitmap : $(MU2000)
+	build\mu2000.exe -b
+
+mu2000-wave : $(MU2000) mu2000/xv364a0.ic49 mu2000/xv365a0.ic50 mu2000/xw848a0.ic53 mu2000/xw849a0.ic54
+!IF !EXIST("wave/mu2000/")
+	@mkdir wave\mu2000
+!ELSE
+	@del wave\mu2000\*.wav
+!ENDIF
+	build\mu2000.exe -w
+
 SW1000XG = sw1000xg sw1000xg/1.06.06_xv561d0.ic102
 
 sw1000xg : build build/sw1000xg.exe
