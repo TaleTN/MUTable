@@ -1319,10 +1319,17 @@ int main(const int argc, const char* const* const argv)
 
 	static const char* const roms[] =
 	{
+		#ifdef MU2000_FIRMWARE_V1_01
+		// IC25 XW87020 FLASH ROM v1.01
+		"mu2000/xw87020.ic25", // SHA1(2213b9c661c6b1a79963321c37aff40be7cc1fff)
+		// IC24 XW86920 FLASH ROM v1.01
+		"mu2000/xw86920.ic24", // SHA1(594b4c64aecf6a5204b058375e39e44b8fe373be)
+		#else // MU2000_FIRMWARE_V2_01
 		// IC25 FLASH ROM v2.01
 		"mu2000/mu2000-v2.01-h.bin", // SHA1(00d008b6a2536a71681ce2f4fd1a5853406f82f2)
 		// IC24 FLASH ROM v2.01
 		"mu2000/mu2000-v2.01-l.bin", // SHA1(fd8fe6a5cbba028d847453c004cb2dcf9ba02013)
+		#endif
 
 		// IC49 XV364A0 WAVE ROM 1 64M
 		"mu2000/xv364a0.ic49", // SHA1(e7098246b33c3cf22ed8cc15ed6383f8a06d17e9)
@@ -1364,6 +1371,12 @@ int main(const int argc, const char* const* const argv)
 			{ +2941520, +2966616, +2981216, +2986344 }
 		};
 
+		#ifdef MU2000_FIRMWARE_V1_01
+		static const int rebase = -281316;
+		#else // MU2000_FIRMWARE_V2_01
+		static const int rebase = 0;
+		#endif
+
 		static const int m = sizeof(ofs) / sizeof(ofs[0]);
 		int n = 0;
 
@@ -1374,7 +1387,7 @@ int main(const int argc, const char* const* const argv)
 				char fn[128];
 				sprintf(fn, "midi/mu2000_%s_%c.mid", filename[i], 'a' + j);
 
-				const int size = write_midi(fn, &firmware, ofs[i][j]);
+				const int size = write_midi(fn, &firmware, ofs[i][j] + rebase);
 				n += size > 0;
 			}
 		}
@@ -1387,22 +1400,55 @@ int main(const int argc, const char* const* const argv)
 
 	if (opt == '-t')
 	{
+		static const int ofs[] =
+		{
+			#ifdef MU2000_FIRMWARE_V1_01
+			+2419984,
+			+2404382,
+			+2361248,
+			+2360608,
+			+2360096,
+			+2361120,
+			+2420752,
+			+2246944,
+			+1824944,
+			+2070688,
+			+1823936,
+			+1777680, 2891
+			#else // MU2000_FIRMWARE_V2_01
+			+2696000,
+			+2680398,
+			+2637264,
+			+2636624,
+			+2636112,
+			+2637136,
+			+2696768,
+			+2522960,
+			+2100960,
+			+2346704,
+			+2099952,
+			+2053536, 2901
+			#endif
+		};
+
+		const int num = ofs[12];
+
 		printf("MU2000 Data Tables\n\n");
 
-		print_drum_banks(&firmware, +2696000, 6); puts("\n--\n");
-		print_drum_kits(&firmware, +2680398, 60); puts("\n--\n");
-		print_drum_voices(&firmware, +2637264, 1027); puts("\n--\n");
-		print_sfx_voices(&firmware, +2636624, 97); puts("\n--\n");
+		print_drum_banks(&firmware, ofs[0], 6); puts("\n--\n");
+		print_drum_kits(&firmware, ofs[1], 60); puts("\n--\n");
+		print_drum_voices(&firmware, ofs[2], 1027); puts("\n--\n");
+		print_sfx_voices(&firmware, ofs[3], 97); puts("\n--\n");
 
-		print_bank_lists(&firmware, +2636112, 4, "MU2000"); puts("\n--\n");
-		print_bank_lists(&firmware, +2637136, 1, "TG300B"); puts("\n--\n");
-		print_bank_lists(&firmware, +2696768, 2, "GM"); puts("\n--\n");
-		print_program_banks(&firmware, +2522960, 221); puts("\n--\n");
-		print_normal_voices(&firmware, +2100960, 1635); puts("\n--\n");
-		print_level_scales(&firmware, +2346704, 1377); puts("\n--\n");
+		print_bank_lists(&firmware, ofs[4], 4, "MU2000"); puts("\n--\n");
+		print_bank_lists(&firmware, ofs[5], 1, "TG300B"); puts("\n--\n");
+		print_bank_lists(&firmware, ofs[6], 2, "GM"); puts("\n--\n");
+		print_program_banks(&firmware, ofs[7], 221); puts("\n--\n");
+		print_normal_voices(&firmware, ofs[8], 1635); puts("\n--\n");
+		print_level_scales(&firmware, ofs[9], 1377); puts("\n--\n");
 
-		print_sample_sets(&firmware, +2099952, 503); puts("\n--\n");
-		print_samples(&firmware, +2053536, 2901);
+		print_sample_sets(&firmware, ofs[10], 503); puts("\n--\n");
+		print_samples(&firmware, ofs[11], num);
 
 		return EXIT_SUCCESS;
 	}
@@ -1411,6 +1457,48 @@ int main(const int argc, const char* const* const argv)
 	{
 		static const int ofs_num[][2] =
 		{
+			#ifdef MU2000_FIRMWARE_V1_01
+			{ +1578192, 1427 },
+			{ +1625024, 40   },
+			{ +1626322, 310  },
+			{ +1641020, 47   },
+			{ +1642588, 55   },
+			{ +1644484, 20   },
+			{ +1651568, 5    },
+			{ +1651794, 1    },
+			{ +1652400, 1    },
+			{ +1652466, 1    },
+			{ +1652532, 14   },
+			{ +1654508, 1    },
+			{ +1656772, 1    },
+			{ +1657404, 1    },
+			{ +1657538, 32   },
+			{ +1659036, 58   },
+			{ +1660960, 112  },
+			{ +1664578, 1    },
+			{ +1664712, 1    },
+			{ +1665000, 2    },
+			{ +1665132, 23   },
+			{ +1666018, 48   },
+			{ +1667656, 1    },
+			{ +1667706, 1    },
+			{ +1667774, 16   },
+			{ +1668346, 2    },
+			{ +1668444, 6    },
+			{ +1670036, 32   },
+			{ +1671442, 16   },
+			{ +1672652, 16   },
+			{ +1673470, 16   },
+			{ +1674092, 63   },
+			{ +1676266, 7    },
+			{ +1676592, 16   },
+			{ +1677138, 15   },
+			{ +1677670, 11   },
+			{ +1678116, 2    },
+			{ +1678212, 22   },
+			{ +1678982, 31   },
+			{ +1680044, 10   },
+			#else // MU2000_FIRMWARE_V2_01
 			{ +1817552, 469  },
 			{ +1832696, 1695 },
 			{ +1888452, 45   },
@@ -1453,6 +1541,7 @@ int main(const int argc, const char* const* const argv)
 			{ +1943806, 31   },
 			{ +1944904, 40   },
 			{ +1946190, 52   }
+			#endif
 		};
 
 		FILE* const fp = fopen("table/mu2000_bitmap.txt", "wb");
@@ -1490,8 +1579,21 @@ int main(const int argc, const char* const* const argv)
 
 	if (opt == '-w')
 	{
-		int n = extract_drum_samples("wave/mu2000/drum_%05d.wav", &firmware, +2637264, 1027, &wavetbl);
-		n += extract_samples("wave/mu2000/sample_%05d.wav", &firmware, +2053536, 2901, &wavetbl);
+		static const int ofs[] =
+		{
+			#ifdef MU2000_FIRMWARE_V1_01
+			+2361248,
+			+1777680, 2891
+			#else // MU2000_FIRMWARE_V2_01
+			+2637264,
+			+2053536, 2901
+			#endif
+		};
+
+		const int num = ofs[2];
+
+		int n = extract_drum_samples("wave/mu2000/drum_%05d.wav", &firmware, ofs[0], 1027, &wavetbl);
+		n += extract_samples("wave/mu2000/sample_%05d.wav", &firmware, ofs[1], num, &wavetbl);
 
 		if (!n) return EXIT_FAILURE;
 
