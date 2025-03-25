@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2024 Theo Niessink <theo@taletn.com>
+// Copyright (C) 2019-2025 Theo Niessink <theo@taletn.com>
 // This work is free. You can redistribute it and/or modify it under the
 // terms of the Do What The Fuck You Want To Public License, Version 2,
 // as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
@@ -1112,6 +1112,9 @@ int main(const int argc, const char* const* const argv)
 		#ifdef MU50_FIRMWARE_V1_04
 		// IC7 PROGRAM ROM 4M v1.04
 		"mu50/yamaha_mu50.bin", // SHA1(58c41f10d292cac35ef0e8f93029fbc4685df586)
+		#elif defined(MU50_FIRMWARE_V1_06)
+		// IC7 PROGRAM ROM 4M v1.06
+		"mu50/Yamaha MU50 (1.06) [27C4096].bin", // SHA1(1a1f055ba51764611756f4ac8995c1e74d5af20c)
 		#else // MU50_FIRMWARE_V1_05
 		// IC7 XR174C0 PROGRAM ROM 4M v1.05
 		"mu50/xr174c0.ic7", // SHA1(9ca892920598f9fdf08544dac4c0e54e7d46ee3c)
@@ -1154,6 +1157,9 @@ int main(const int argc, const char* const* const argv)
 			#ifdef MU50_FIRMWARE_V1_04
 			+141786,
 			+242574
+			#elif defined(MU50_FIRMWARE_V1_06)
+			+141976,
+			+242742
 			#else // MU50_FIRMWARE_V1_05
 			+141914,
 			+242634
@@ -1181,6 +1187,8 @@ int main(const int argc, const char* const* const argv)
 	{
 		#ifdef MU50_FIRMWARE_V1_04
 		static const int rebase = -60;
+		#elif defined(MU50_FIRMWARE_V1_06)
+		static const int rebase = +92;
 		#else // MU50_FIRMWARE_V1_05
 		static const int rebase = 0;
 		#endif
