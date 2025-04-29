@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Theo Niessink <theo@taletn.com>
+# Copyright (C) 2024, 2025 Theo Niessink <theo@taletn.com>
 # This work is free. You can redistribute it and/or modify it under the
 # terms of the Do What The Fuck You Want To Public License, Version 2,
 # as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
@@ -275,6 +275,21 @@ mu2000-wave : $(MU2000) mu2000/xv364a0.ic49 mu2000/xv365a0.ic50 mu2000/xw848a0.i
 	@del wave\mu2000\*.wav
 !ENDIF
 	build\mu2000.exe -w
+
+PSR500 = psr500 psr500/xj426b0.ic3
+
+psr500 : build build/psr500.exe
+
+psr500-table : $(PSR500)
+	build\psr500.exe -t > table\psr500.txt
+
+psr500-wave : $(PSR500)
+!IF !EXIST("wave/psr500/")
+	@mkdir wave\psr500
+!ELSE
+	@del wave\psr500\*.wav
+!ENDIF
+	build\psr500.exe -w
 
 SW1000XG = sw1000xg sw1000xg/1.06.06_xv561d0.ic102
 
