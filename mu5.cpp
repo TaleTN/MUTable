@@ -288,21 +288,22 @@ Offset  | Size | Data            | Parameter                    | Description   
 +13     | 1    | 00     - 0F     | Level scaling offset 3 LSB   |                          | 00
 +14     | 1    | 00     - 0F     | Level scaling offset 4 MSB   | -128 - +127              | 08
 +15     | 1    | 00     - 0F     | Level scaling offset 4 LSB   |                          | 00
-+16     | 1    | ?               | ?                            | ?                        | 00
-+17     | 1    | ?               | ?                            | ?                        | 07
++16     | 1    | 00     - 0F     | Panpot                       | L7 - R7                  | 00
++17     | 1    | Bit 4  - 7      | ?                            | ?                        | 07
+        | 1    | Bit 0  - 3      | LFO speed                    | 0 - 7                    |
 +18     | 1    | ?               | ?                            | ?                        | 03
-+19     | 1    | ?               | ?                            | ?                        | 00
-+20     | 1    | ?               | ?                            | ?                        | 00
-+21     | 1    | ?               | ?                            | ?                        | 00
++19     | 1    | 00     - 0F     | LFO pitch mod depth          | 0 - 15                   | 00
++20     | 1    | 00     - 07     | LFO amp mod depth            | 0 - 7                    | 00
++21     | 1    | ?               | Velocity curve               | 0 - 3                    | 00
 
 */
 void print_normal_voices(const WDL_HeapBuf* const firmware, int ofs, const int num)
 {
 	printf("Normal Voices (+%d)\n", ofs);
 
-	static const char* const hdr  = "                                         Voice                                         |                                          Element                                          \n"
-	                                "Offset  | E | Lv1 | Lv2 | Dt1 | Dt2 | Mod | S1 | Ns1 | NS1 | NS2 | S2 | Ns2 | Name     | Wave# | AR  | RR  | BP1 | BP2 | BP3 | BP4 | Ofs1 | Ofs2 | Ofs3 | Ofs4 | Pitch EG?         ";
-	static const char* const line = "--------+---+-----+-----+-----+-----+-----+----+-----+-----+-----+----+-----+----------+-------+-----+-----+-----+-----+-----+-----+------+------+------+------+-------------------";
+	static const char* const hdr  = "                                         Voice                                         |                                                 Element                                                  \n"
+	                                "Offset  | E | Lv1 | Lv2 | Dt1 | Dt2 | Mod | S1 | Ns1 | NS1 | NS2 | S2 | Ns2 | Name     | Wave# | AR  | RR  | BP1 | BP2 | BP3 | BP4 | Ofs1 | Ofs2 | Ofs3 | Ofs4 | Pan | ? | Sp | ?  | PM | AM | VC ";
+	static const char* const line = "--------+---+-----+-----+-----+-----+-----+----+-----+-----+-----+----+-----+----------+-------+-----+-----+-----+-----+-----+-----+------+------+------+------+-----+---+----+----+----+----+----";
 	static const char* const skip = "        |   |     |     |     |     |     |    |     |     |     |    |     |          | ";
 
 	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
@@ -344,10 +345,12 @@ void print_normal_voices(const WDL_HeapBuf* const firmware, int ofs, const int n
 			printf("%-+3d | %-+3d | ", ptr[2] - 64, ptr[3] - 64);
 			for (int l = 0; l < 4; ++l) printf("%-3d | ", ptr[4 + l]);
 			for (int l = 0; l < 4; ++l) printf("%-+4d | ", ((ptr[8 + 2*l] << 4) | ptr[9 + 2*l]) - 128);
+			printf("%-+3d | ", (signed char)(ptr[16] << 4) >> 4);
 
-			for (int l = 16; l < 22; ++l) printf("%02X ", ptr[l]);
+			printf("%X | %-2d | %02X | ", ptr[17] >> 4, ptr[17] & 0x0F, ptr[18]);
+			printf("%-2d | %-2d | ", ptr[19], ptr[20]);
 
-			putchar('\n');
+			printf("%-2d \n", ptr[21]);
 			ptr += 22;
 		}
 
