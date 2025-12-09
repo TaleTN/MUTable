@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Theo Niessink <theo@taletn.com>
+// Copyright (C) 2024-2025 Theo Niessink <theo@taletn.com>
 // This work is free. You can redistribute it and/or modify it under the
 // terms of the Do What The Fuck You Want To Public License, Version 2,
 // as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
@@ -167,6 +167,7 @@ Offset  | Size | Data            | Parameter                 | Description      
 +22     | 2    | 0000   - FFFF   | Loop length               | 0 - 65535 [samples]        | 0000
 +24     | 3    | 000000 - 3FFFFF | Loop point address        | 4 MB wave ROM address      | 000000
 +27     | 1    | Bit 6  - 7      | Sample format             | 1:12-bit, 2:8-bit, 3:DPCM  | 00
+        |      | Bit 0  - 5      | Loop fraction             | 0 - 63                     |
         |      | Bit 2  - 4      | DPCM scale                | 2^0 - 2^7                  |
         |      | Bit 0  - 1      | DPCM offset               | 0:-7, 1:-6, 2:-4, 3:0      |
 +28     | 1    | 80     - 7F     | Pitch fine                | -128 - +127 [cent]         | 00
@@ -177,9 +178,9 @@ void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num
 {
 	printf("Drum Voices (+%d)\n", ofs);
 
-	static const char* const hdr  = "                                              Voice                                               |                              Sample                               \n"
-	                                "Offset  | PC  | PF  | Lvl | Alt | Pan | Rev | Cho | Var | K | 0 | 1 | Cut | Q   | A   | D1  | D2  | SFX#  | Rat | Attack | -  | Loop   | Addr   | F | D8 | PF   | PC   ";
-	static const char* const line = "--------+-----+-----+-----+-----+-----+-----+-----+-----+---+---+---+-----+-----+-----+-----+-----+-------+-----+--------+----+--------+--------+---+----+------+------";
+	static const char* const hdr  = "                                              Voice                                               |                                 Sample                                  \n"
+	                                "Offset  | PC  | PF  | Lvl | Alt | Pan | Rev | Cho | Var | K | 0 | 1 | Cut | Q   | A   | D1  | D2  | SFX#  | Rat | Attack | -  | Loop   | Addr   | F | Fr | D8 | PF   | PC   ";
+	static const char* const line = "--------+-----+-----+-----+-----+-----+-----+-----+-----+---+---+---+-----+-----+-----+-----+-----+-------+-----+--------+----+--------+--------+---+----+----+------+------";
 
 	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
 	ofs = 0;
@@ -212,13 +213,18 @@ void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num
 		const int attack = (ptr[19] << 8) | ptr[20];
 		const int loop = (ptr[22] << 8) | ptr[23];
 		const int addr = (ptr[24] << 16) | (ptr[25] << 8) | ptr[26];
-		const int format = ptr[27] >> 6, dpcm = ptr[27] & 0x3F;
 
 		printf("%-6d | ", attack);
 		printf("%02X | %-6d | ", ptr[21], loop);
 		printf("%06X | ", addr);
-		printf("%d | %02X | ", format, dpcm);
 
+		const int format = ptr[27] >> 6, frac = ptr[27] & 0x3F;
+		const int dpcm = frac /* & 0x1F */;
+
+		// const double frac_loop = (double)((loop << 6) - (format != 3 && loop ? frac : 0)) * 0.015625;
+
+		printf("%d | ", format);
+		printf(format != 3 ? "%-2d |    | " : "   | %02X | ", format != 3 ? frac : dpcm);
 		printf("%-+4d | %-+4d \n", (signed char)ptr[28], (signed char)ptr[29]);
 
 		ptr += 30;
@@ -621,6 +627,7 @@ Offset  | Size | Data            | Parameter                 | Description      
 +7      | 2    | 0000   - FFFF   | Loop length               | 0 - 65535 [samples]        | 0000
 +9      | 3    | 000000 - 3FFFFF | Loop point address        | 4 MB wave ROM address      | 000000
 +12     | 1    | Bit 6  - 7      | Sample format             | 1:12-bit, 2:8-bit, 3:DPCM  | 00
+        |      | Bit 0  - 5      | Loop fraction             | 0 - 63                     |
         |      | Bit 2  - 4      | DPCM scale                | 2^0 - 2^7                  |
         |      | Bit 0  - 1      | DPCM offset               | 0:-7, 1:-6, 2:-4, 3:0      |
 +13     | 1    | 9A     - 76     | ?                         | ?                          | 00
@@ -632,8 +639,8 @@ void print_samples(const WDL_HeapBuf* const firmware, int ofs, const int num)
 {
 	printf("Samples (+%d)\n", ofs);
 
-	static const char* const hdr  = "Offset  | Atn | PC   | PF   | -  | Attack | -  | Loop   | Addr   | F | D8 | ?  | N1  | N2  ";
-	static const char* const line = "--------+-----+------+------+----+--------+----+--------+--------+---+----+----+-----+-----";
+	static const char* const hdr  = "Offset  | Atn | PC   | PF   | -  | Attack | -  | Loop   | Addr   | F | Fr| D8 | ?  | N1  | N2  ";
+	static const char* const line = "--------+-----+------+------+----+--------+----+--------+--------+---+----+----+----+-----+-----";
 
 	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
 	ofs = 0;
@@ -655,14 +662,19 @@ void print_samples(const WDL_HeapBuf* const firmware, int ofs, const int num)
 		const int attack = (ptr[4] << 8) | ptr[5];
 		const int loop = (ptr[7] << 8) | ptr[8];
 		const int addr = (ptr[9] << 16) | (ptr[10] << 8) | ptr[11];
-		const int format = ptr[12] >> 6, dpcm = ptr[12] & 0x3F;
 
 		printf("%02X | %-6d | ", ptr[3], attack);
 		printf("%02X | %-6d | ", ptr[6], loop);
 		printf("%06X | ", addr);
-		printf("%d | %02X | %02X | ", format, dpcm, ptr[13]);
 
-		printf("%-3d | %-3d \n", ptr[14], ptr[15]);
+		const int format = ptr[12] >> 6, frac = ptr[12] & 0x3F;
+		const int dpcm = frac /* & 0x1F */;
+
+		// const double frac_loop = (double)((loop << 6) - (format != 3 && loop ? frac : 0)) * 0.015625;
+
+		printf("%d | ", format);
+		printf(format != 3 ? "%-2d |    | " : "   | %02X | ", format != 3 ? frac : dpcm);
+		printf("%02X | %-3d | %-3d \n", ptr[14], ptr[14], ptr[15]);
 
 		ptr += 16;
 		ofs += 16;

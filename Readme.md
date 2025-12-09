@@ -54,7 +54,7 @@ sound modules and options.
 
 ## License
 
-Copyright &copy; 2019-2024 Theo Niessink &lt;theo@taletn.com&gt;  
+Copyright &copy; 2019-2025 Theo Niessink &lt;theo@taletn.com&gt;  
 This work is free. You can redistribute it and/or modify it under the
 terms of the Do What The Fuck You Want To Public License, Version 2,
 as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.

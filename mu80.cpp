@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2024 Theo Niessink <theo@taletn.com>
+// Copyright (C) 2019-2025 Theo Niessink <theo@taletn.com>
 // This work is free. You can redistribute it and/or modify it under the
 // terms of the Do What The Fuck You Want To Public License, Version 2,
 // as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
@@ -330,7 +330,7 @@ void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num
 		const int format = ptr[5] >> 6;
 		const int loop = (ptr[6] << 8) | ptr[7];
 		const int addr = ((ptr[8] << 16) | (ptr[9] << 8) | ptr[10]) << 1;
-		const int dpcm = ptr[11];
+		const int dpcm = ptr[11] /* & 0x1F */;
 
 		printf("%-6d | %d | %-6d | ", attack, format, loop);
 		printf("%06X | %02X | ", addr, dpcm);
@@ -735,7 +735,7 @@ void print_samples(const WDL_HeapBuf* const firmware, int ofs, const int num)
 		const int format = ptr[5] >> 6;
 		const int loop = (ptr[6] << 8) | ptr[7];
 		const int addr = ((ptr[8] << 16) | (ptr[9] << 8) | ptr[10]) << 1;
-		const int dpcm = ptr[11];
+		const int dpcm = ptr[11] /* & 0x1F */;
 
 		printf("%-6d | %d | %-6d | ", attack, format, loop);
 		printf("%06X | %02X | ", addr, dpcm);

@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2024 Theo Niessink <theo@taletn.com>
+// Copyright (C) 2019-2025 Theo Niessink <theo@taletn.com>
 // This work is free. You can redistribute it and/or modify it under the
 // terms of the Do What The Fuck You Want To Public License, Version 2,
 // as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
@@ -308,7 +308,8 @@ Offset  | Size | Data            | Parameter                 | Description      
 +27     | 1    | 80     - 7F     | Pitch fine                | -128 - +127 [cent]          | 00
 +28     | 1    | 80     - 7F     | Pitch coarse              | -128 - +127 [semitone]      | 00
 +29     | 1    | C5     - 34     | ?                         | ?                           | 00
-+30     | 1    | 00     - 6C     | ?                         | ?                           | 00
++30     | 1    | Bit 6  - 7      | ?                         | ?                           | 00
+        |      | Bit 0  - 5      | Loop fraction             | 0 - 63                      |
 +31     | 3    | 000000 - FFFFFF | Attack length             | 0 - 16777215 [samples]      | 000000
 +34     | 1    | Bit 7           | Reverse playback          | 0:normal, 1:reverse         | 00
         |      | Bit 0  - 6      | ?                         | ?                           |
@@ -324,9 +325,9 @@ void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num
 {
 	printf("Drum Voices (+%d)\n", ofs);
 
-	static const char* const hdr  = "                                                                 Voice                                                                  |                                       Sample                                        \n"
-	                                "Offset  | PC  | PF  | Lvl | Alt | Pan | Rev | Cho | Var | K | 0 | 1 | Cut | Q   | A   | D1  | D2  | ?  | LG  | LF | HG  | HF | ?        | SFX#  | Rat | PF   | PC   | ?     | Attack   | R | ?  | Loop     | F | D8 | Address ";
-	static const char* const line = "--------+-----+-----+-----+-----+-----+-----+-----+-----+---+---+---+-----+-----+-----+-----+-----+----+-----+----+-----+----+----------+-------+-----+------+------+-------+----------+---+----+----------+---+----+---------";
+	static const char* const hdr  = "                                                                 Voice                                                                  |                                          Sample                                          \n"
+	                                "Offset  | PC  | PF  | Lvl | Alt | Pan | Rev | Cho | Var | K | 0 | 1 | Cut | Q   | A   | D1  | D2  | ?  | LG  | LF | HG  | HF | ?        | SFX#  | Rat | PF   | PC   | ?     | Fr | Attack   | R | ?  | Loop     | F | D8 | Address ";
+	static const char* const line = "--------+-----+-----+-----+-----+-----+-----+-----+-----+---+---+---+-----+-----+-----+-----+-----+----+-----+----+-----+----+----------+-------+-----+------+------+-------+----+----------+---+----+----------+---+----+---------";
 
 	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
 	ofs = 0;
@@ -364,17 +365,18 @@ void print_drum_voices(const WDL_HeapBuf* const firmware, int ofs, const int num
 
 		printf("%-3d | ", ptr[26]);
 		printf("%-+4d | %-+4d | ", (signed char)ptr[27], (signed char)ptr[28]);
+		printf("%02X %02X | ", ptr[29], ptr[30] & 0xC0);
 
-		for (int j = 29; j < 31; ++j) printf("%02X ", ptr[j]);
-		printf("| ");
-
+		const int frac = ptr[30] & 0x3F;
 		const int attack = (ptr[31] << 16) | (ptr[32] << 8) | ptr[33];
 		const int reverse = ptr[34] >> 7;
 		const int loop = (ptr[35] << 16) | (ptr[36] << 8) | ptr[37];
 		const int format = ptr[38] >> 6, dpcm = (ptr[38] >> 1) & 0x1F;
 		const int addr = (((ptr[38] & 0x01) << 24) | (ptr[39] << 16) | (ptr[40] << 8) | ptr[41]) << 2;
 
-		printf("%-8d | ", attack);
+		// const double frac_loop = (double)((loop << 6) - (loop ? frac : 0)) * 0.015625;
+
+		printf("%-2d | %-8d | ", frac, attack);
 		printf("%d | %02X | %-8d | ", reverse, ptr[34] & 0x7F, loop);
 		printf("%d | %02X | %07X \n", format, dpcm, addr);
 
@@ -757,7 +759,8 @@ Offset  | Size | Data            | Parameter                 | Description      
 +1      | 1    | 80     - 7F     | Pitch coarse              | -128 - 127 [note]           | 3C
 +2      | 1    | 80     - 7F     | Pitch fine                | -128 - +127 [cent]          | 40
 +3      | 1    | 00     - 7F     | Note limit high           | 0 - 127 [note]              | 7F
-+4      | 1    | 00     - 6C     | ?                         | ?                           | 00
++4      | 1    | Bit 6  - 7      | ?                         | ?                           | 00
+        |      | Bit 0  - 5      | Loop fraction             | 0 - 63                      |
 +5      | 3    | 000000 - FFFFFF | Attack length             | 0 - 16777215 [samples]      | 000000
 +8      | 1    | Bit 7           | Reverse playback          | 0:normal, 1:reverse         | 00
         |      | Bit 0  - 6      | ?                         | ?                           |
@@ -773,8 +776,8 @@ void print_samples(const WDL_HeapBuf* const firmware, int ofs, const int num)
 {
 	printf("Samples (+%d)\n", ofs);
 
-	static const char* const hdr  = "Offset  | Atn | PC   | PF   | N   | ?  | Attack   | R | ?  | Loop     | F | D8 | Address ";
-	static const char* const line = "--------+-----+------+------+-----+----+----------+---+----+----------+---+----+---------";
+	static const char* const hdr  = "Offset  | Atn | PC   | PF   | N   | ?  | Fr | Attack   | R | ?  | Loop     | F | D8 | Address ";
+	static const char* const line = "--------+-----+------+------+-----+----+----+----------+---+----+----------+---+----+---------";
 
 	const unsigned char* ptr = (const unsigned char*)firmware->Get() + ofs;
 	ofs = 0;
@@ -792,15 +795,18 @@ void print_samples(const WDL_HeapBuf* const firmware, int ofs, const int num)
 
 		printf("%-3d | ", ptr[0]);
 		printf("%-4d | %-+4d | ", (signed char)ptr[1], (signed char)ptr[2]);
-		printf("%-3d | ", ptr[3]);
+		printf("%-3d | %02X | ", ptr[3], ptr[4] & 0xC0);
 
+		const int frac = ptr[4] & 0x3F;
 		const int attack = (ptr[5] << 16) | (ptr[6] << 8) | ptr[7];
 		const int reverse = ptr[8] >> 7;
 		const int loop = (ptr[9] << 16) | (ptr[10] << 8) | ptr[11];
 		const int format = ptr[12] >> 6, dpcm = (ptr[12] >> 1) & 0x1F;
 		const int addr = (((ptr[12] & 0x01) << 24) | (ptr[13] << 16) | (ptr[14] << 8) | ptr[15]) << 2;
 
-		printf("%02X | %-8d | ", ptr[4], attack);
+		// const double frac_loop = (double)((loop << 6) - (loop ? frac : 0)) * 0.015625;
+
+		printf("%-2d | %-8d | ", frac, attack);
 		printf("%d | %02X | %-8d | ", reverse, ptr[8] & 0x7F, loop);
 		printf("%d | %02X | %07X \n", format, dpcm, addr);
 
