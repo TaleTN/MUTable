@@ -784,7 +784,7 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 	}
 
 	wav.EndDataChunk();
-	if (loop) write_cue_points(&wav, loop);
+	if (loop) write_cue_points(&wav, attack);
 	wav.Close();
 
 	return len;
