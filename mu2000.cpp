@@ -1187,6 +1187,8 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 		// 8-bit signed log DPCM
 		case 3:
 		{
+			assert(reverse == false);
+
 			static const unsigned short log_tbl[128] =
 			{
 				0, 8, 16, 24, 32, 40, 48, 56, 64, 72,
@@ -1212,10 +1214,7 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 
 			for (int i = 0; i <= n; ++i)
 			{
-				int j = n - i;
-				j = !reverse ? i : j;
-
-				const int step = base[j];
+				const int step = base[i];
 
 				const int delta = log_tbl[step & 0x7F];
 				const int min_delta = -delta;
@@ -1223,7 +1222,7 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 				sum += step & 0x80 ? min_delta : delta;
 				sum -= ofs;
 
-				int y = (sum << scale) >> 3;
+				int y = (sum << scale) / 8;
 
 				y = wdl_max(y, -32768);
 				y = wdl_min(y, +32767);

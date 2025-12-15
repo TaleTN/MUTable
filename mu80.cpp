@@ -921,7 +921,7 @@ int write_sample(const char* const filename, const WDL_HeapBuf* const wavetbl, c
 				sum += step & 0x80 ? min_delta : delta;
 				sum -= ofs;
 
-				int y = (sum << scale) >> 3;
+				int y = (sum << scale) / 8;
 
 				y = wdl_max(y, -32768);
 				y = wdl_min(y, +32767);
